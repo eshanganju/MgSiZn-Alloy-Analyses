@@ -11,19 +11,8 @@ from scipy import ndimage
 
 VERBOSE = True
 
-ofl="/home/eg/Desktop/EG-WateshedAnalysesAvizo/output4-Dilated/"
-
-inputFile = '/home/eg/Desktop/EG-WateshedAnalysesAvizo/EG-WateshedAnalysesAvizo-ALL.tif'
-
-clm = tf.imread(inputFile)
-
-numPtcl = clm.max()
-
-print('Num particles: ' + str(numPtcl))
-
-a = input('-------------')
-
-particleData = np.zeros((numPtcl,6)) 	#Index, Volume, Surface area, NumBranches, Hull area, Hull Volume
+clm = input('Enter label map location: ')
+ofl = input('Enter output folder location: ')
 
 genSTL=False
 genSkeleton=False
@@ -74,6 +63,21 @@ def convexHullDataOfParticle(particleMap, dilateParticle=False):
 	area = particleHull.area
 
 	return area, volume
+
+def analyzeParticles(labMapLoc, sampleName='', saveData=True, outputDir='',):
+	"""Code for the analyses of label map
+	"""
+
+	ofl=outputDir
+	clm = tf.imread(labMapLoc)
+	numPtcl = clm.max()
+
+	print('\nNum particles: ' + str(numPtcl))
+
+	a = input('-------------')
+
+	particleData = np.zeros((numPtcl,6)) 	#Index, Volume, Surface area, NumBranches, Hull area, Hull Volume
+
 
 for ptclNo in range(1, numPtcl + 1):
 	
