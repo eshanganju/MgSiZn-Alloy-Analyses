@@ -18,9 +18,9 @@ import trimesh
 
 VERBOSE = True
 
-clm = '/home/eg/Desktop/MgZnSi-Analyses/Clean-B-2-7.tif'	# input('Enter label map location: ')
-ofl = '/home/eg/Desktop/MgZnSi-Analyses/outPut/B-2-7/' 		# input('Enter output folder location: ')
-sampleName = 'B-2-7'										# input('Enter sample name: ')
+clm = '/home/eg/Desktop/MgZnSi-Analyses/Clean-D-3-8.tif'		# input('Enter label map location: ')
+ofl = '/home/eg/Desktop/MgZnSi-Analyses/outPut/D-3-8-All/' 		# input('Enter output folder location: ')
+sampleName = 'D-3-8'											# input('Enter sample name: ')
 
 genSTL=False
 
@@ -164,10 +164,8 @@ def analyzeParticles(labMapLoc, sampleName='', skeletonSizeLimit=100, saveData=T
 	
 	#Index, Surface area, Hull area, volume, hull volume
 	particleData = np.zeros((numPtcl,5)) 	
-
-	ptclList = [2365,1003,1095,2871,501,2177,22,864,3080,2131]
 	
-	for ptclNo in ptclList:
+	for ptclNo in range(1,numPtcl+1):
 		
 		print('\nChecking particle ' + str(ptclNo) + '/' + str(numPtcl))	
 
@@ -175,86 +173,91 @@ def analyzeParticles(labMapLoc, sampleName='', skeletonSizeLimit=100, saveData=T
 
 		particleData[ptclNo-1,0] = ptclNo
 
-		# Extract particle subvolume
-		print('\tCropping')
 
-		ptcl = cropAndPadParticle(labelledMap=clm,
-											label=ptclNo,
-											pad= 20,
-											saveData=True,
-											fileName= currFileName,
-											outputDir=ofl)
+		try:
+			# Extract particle subvolume
+			print('\tCropping')
 
-		tf.imwrite( (ofl+currFileName+'.tiff'), ptcl.astype('uint8'))
+			ptcl = cropAndPadParticle(labelledMap=clm,
+												label=ptclNo,
+												pad= 20,
+												saveData=True,
+												fileName= currFileName,
+												outputDir=ofl)
 
-		# Generate STL
-		if genSTL == True:
-			print('\tMaking Stl')
-			generateInPlaceStlFile( ptcl, 
-									stepSize = 1, 
-									saveImg=True, 
-									sampleName=currFileName, 
-									outputDir=ofl)
+			tf.imwrite( (ofl+currFileName+'.tiff'), ptcl.astype('uint8'))
 
-		# Getting particle volume
-		if genPtclVol == True:
-			print('\tGetting particle volume')
-			ptclVol=np.sum(ptcl)
-			particleData[ptclNo-1,3] = ptclVol
-			print('\t\tVolume:', str(ptclVol))
-		
-		# Compute EDM of particle subvolume
-		if genEDM == True:
-			print('\tEDMing')
-			edmPtcl = obtainEuclidDistanceMap( binaryMapForEDM=ptcl, 
-												scaleUp = int(1), 
-												saveImg=False, 
-												sampleName=currFileName, 
-												outputDir=ofl )
+			# Generate STL
+			if genSTL == True:
+				print('\tMaking Stl')
+				generateInPlaceStlFile( ptcl, 
+										stepSize = 1, 
+										saveImg=True, 
+										sampleName=currFileName, 
+										outputDir=ofl)
 
-		# Generate skeleton
-		if genSkeleton == True and ptclVol >= skeletonSizeLimit:
-			print('\tSkeletonizing')
-			ptclSkeleton = skeletonize(ptcl)
-			tf.imwrite( (ofl+currFileName+'-skeleton.tiff'), ptclSkeleton.astype('uint8'))
-
-			# weighted skeleton
-			ptclWeightedSkeleton = edmPtcl*ptclSkeleton
-
-			# network analyses of skeleton
-			dataForBranch = summarize(Skeleton(ptclWeightedSkeleton))
-			dataForBranch.to_csv(ofl+currFileName+'-GraphData.csv',sep=',')
-
-			"""The branch type is coded by number as:
-
-			0 - endpoint-to-endpoint (isolated branch)
-			1 - junction-to-endpoint
-			2 - junction-to-junction
-			3 - isolated cycle
-			"""
-
-		else: print('\tParticle too small for skeleton...')
-
-		# Surface area of particles
-		if genSaPtcl == True:
-			print('\tGetting surface area of particle')
-			vertices, faces, _, _ = skimage.measure.marching_cubes(volume=ptcl, 
-																 		level=None, 
-																 		spacing=(1.0, 1.0, 1.0),
-																		gradient_direction='descent', 
-																		step_size=1, 
-																		allow_degenerate=True, 
-																		method='lewiner', 
-																		mask=None)
+			# Getting particle volume
+			if genPtclVol == True:
+				print('\tGetting particle volume')
+				ptclVol=np.sum(ptcl)
+				particleData[ptclNo-1,3] = ptclVol
+				print('\t\tVolume:', str(ptclVol))
 			
-			particleData[ptclNo-1,1]= skimage.measure.mesh_surface_area(vertices, faces)
-		
-		# Hull Data
-		if genHullData == True:
-			print('\tGetting hull data')
-			hullArea, hullVolume = convexHullDataOfParticle(ptcl, dilateParticle=True)
-			particleData[ptclNo-1,2] = hullArea
-			particleData[ptclNo-1,4] = hullVolume
+			# Compute EDM of particle subvolume
+			if genEDM == True:
+				print('\tEDMing')
+				edmPtcl = obtainEuclidDistanceMap( binaryMapForEDM=ptcl, 
+													scaleUp = int(1), 
+													saveImg=False, 
+													sampleName=currFileName, 
+													outputDir=ofl )
+
+			# Generate skeleton
+			if genSkeleton == True and ptclVol >= skeletonSizeLimit:
+				print('\tSkeletonizing')
+				ptclSkeleton = skeletonize(ptcl)
+				tf.imwrite( (ofl+currFileName+'-skeleton.tiff'), ptclSkeleton.astype('uint8'))
+
+				# weighted skeleton
+				ptclWeightedSkeleton = edmPtcl*ptclSkeleton
+
+				# network analyses of skeleton
+				dataForBranch = summarize(Skeleton(ptclWeightedSkeleton))
+				dataForBranch.to_csv(ofl+currFileName+'-GraphData.csv',sep=',')
+
+				"""The branch type is coded by number as:
+
+				0 - endpoint-to-endpoint (isolated branch)
+				1 - junction-to-endpoint
+				2 - junction-to-junction
+				3 - isolated cycle
+				"""
+
+			else: print('\tParticle too small for skeleton...')
+
+			# Surface area of particles
+			if genSaPtcl == True:
+				print('\tGetting surface area of particle')
+				vertices, faces, _, _ = skimage.measure.marching_cubes(volume=ptcl, 
+																	 		level=None, 
+																	 		spacing=(1.0, 1.0, 1.0),
+																			gradient_direction='descent', 
+																			step_size=1, 
+																			allow_degenerate=True, 
+																			method='lewiner', 
+																			mask=None)
+				
+				particleData[ptclNo-1,1]= skimage.measure.mesh_surface_area(vertices, faces)
+			
+			# Hull Data
+			if genHullData == True:
+				print('\tGetting hull data')
+				hullArea, hullVolume = convexHullDataOfParticle(ptcl, dilateParticle=True)
+				particleData[ptclNo-1,2] = hullArea
+				particleData[ptclNo-1,4] = hullVolume
+
+		except:
+			print('\tSomething is off')
 
 		np.savetxt(ofl + sampleName+'-Data.csv',particleData,delimiter=',')
 
